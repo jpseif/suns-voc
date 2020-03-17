@@ -8,7 +8,6 @@ from scipy.optimize import minimize_scalar
 from scipy.stats import linregress
 import os
 import re
-import panda
 
 def implied_J(Jsc, suns):
     return Jsc * (1 - suns)
