@@ -8,6 +8,7 @@ from scipy.optimize import minimize_scalar
 from scipy.stats import linregress
 import os
 import re
+import panda
 
 def implied_J(Jsc, suns):
     return Jsc * (1 - suns)
@@ -202,7 +203,7 @@ class Voltage_Measurement:
             iVoc_corr = self.iVoc_from_nxc(self.nxc_from_PL())
             self.iVoc_corr = iVoc_corr
             self.iVoc_1sun_corr = self.calc_iVoc_1sun_PL(corr=1)
-            
+
             dVoc = (self.VocSunsLo - self.iVoc_1sun_corr) / self.VocSunsLo
             # dVocList = np.append(dVocList, dVoc)
 
