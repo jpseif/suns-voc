@@ -87,7 +87,7 @@ class Voltage_Measurement:
         # Correct the iVoc data from the PL using the Voc at 1 sun from the LO
         # measurement (VocSunsLo).
         dVoc_start = (self.VocSunsLo - self.iVoc_1sun) / self.VocSunsLo
-        self.iVocCorr(self.Ai_increment, dVoc_start)
+        self.iVoc_corr = self.iVocCorr(self.Ai_increment, dVoc_start)
 
     def load_data(self):
         """
@@ -176,6 +176,7 @@ class Voltage_Measurement:
         # If dsuns is smaller than 0 from the start, change the initial direction
         # of the incrementation.
         dVoc = dVoc_start
+        iVoc_corr = self.iVoc_from_nxc(self.nxc_from_PL())
 
         if dVoc < 0:
             increment = increment * (-1)
@@ -222,6 +223,8 @@ class Voltage_Measurement:
             # Stop if the counts go beyond X
             if count > 10000:
                 raise ConvergenceError
+
+        return iVoc_corr
 
     def calc_doping(self, **kwargs):
         """

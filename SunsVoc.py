@@ -191,9 +191,6 @@ class Suns_Voc_Measurement:
 
         # difference of the suns values
         dsuns = (highSunsLO - highSunsHI) / highSunsLO
-        # print("initial dsuns: " + str(dsuns))
-        # print("highSunsLO: " + str(highSunsLO))
-        # print("highSunsHI: " + str(highSunsHI))
         # set the increment to change the refCal
         # increment  < 0 => increases the suns value
         # increment  > 0 => decreases the suns value
