@@ -10,6 +10,7 @@ from scipy.optimize import minimize_scalar
 from scipy.stats import linregress
 import re
 import platform
+import pandas as pd
 
 # Last review: 18.03.2019 by J.Seif
 # a = [0.633841, 0.632358, 0.630932, 0.629482, 0.628043]
@@ -57,6 +58,7 @@ class Suns_Voc_Measurement:
         VocOneSunLO=0,
         SunsLO=0,
         SunsDataLO=0,
+        illumSetpoints=np.array([]),
         dType='n-type',
         refCal=0.115273,
         aMode='QSS'
@@ -76,6 +78,7 @@ class Suns_Voc_Measurement:
         self.HIShifted = 0
         self.names = ['t', 'ref_volt', 'suns', 'volt'] # for the columns
         self.mpp = 0
+        self.idealityPts = idealityPts
         # exterior parameters
         self.T = T # sample temperature [°C]
         self.TK = self.T + 273.15 # sample temperature [K]
@@ -134,6 +137,9 @@ class Suns_Voc_Measurement:
         self.dsuns = 0.1
         self.mppSuns = self.effSuns[self.mpp] # to get the suns value at mpp
         self.mppIdeality = self.localIdeality[self.mpp] # to get the local ideality factor at mpp
+
+        if not np.size(illumSetpoints) == 0:
+            self.getVocVSIllum(illumSetpoints)
 
     # Last review: 11.10.2019 by J.Seif / WORKING
     def load_data(self):
@@ -294,7 +300,7 @@ class Suns_Voc_Measurement:
         xData = np.log(effSuns)
         yData = volt
 
-        localIdeality = self.calc_slope(xData, yData, 13, calcmVoc=0) / (self.const_k * self.TK / self.const_q)
+        localIdeality = self.calc_slope(xData, yData, numpts=self.idealityPts, calcmVoc=0) / (self.const_k * self.TK / self.const_q)
 
         MergedData = np.array([time,
             refVolt,
@@ -700,6 +706,53 @@ class Suns_Voc_Measurement:
 
         return pFF
 
+    def getVocVSIllum(self, setpoints):
+        """
+        Gets the Voc values for user-defined illumination levels.
+
+        Inputs:
+            - setpoints: numpy array containing the setpoint values for the illumination
+            - illum: numpy array containing illumination data
+            - voc: numpy array containing Voc data
+        Outputs:
+            - numpy array containing the Voc values for each setpoint illum.
+        """
+
+        setpoints = np.asarray(setpoints)
+        setpointslog = np.log(setpoints)
+        vocIllum = np.array([])
+        mask = np.array([])
+
+        for value in setpoints:
+            # print("Sun setpoint: " + str(value))
+
+            idx1 = (np.abs(self.netSuns - value)).argmin()
+            # print("idx1: " + str(idx1))
+            # print("self.effSuns[idx1]: " + str(self.netSuns[idx1]))
+            if self.netSuns[idx1] >= value:
+                idx2 = idx1 + 1
+                mask = (self.netSuns <= self.netSuns[idx1]) & (self.netSuns >= self.netSuns[idx2])
+                # print("idx1: " + str(idx1))
+                # print("idx2: " + str(idx2))
+            elif self.netSuns[idx1] <= value:
+                idx2 = idx1 - 1
+                mask = (self.netSuns >= self.netSuns[idx1]) & (self.netSuns <= self.netSuns[idx2])
+                # print("idx1: " + str(idx1))
+                # print("idx2: " + str(idx2))
+
+            # print(mask)
+            xn = np.log(self.netSuns[mask])
+            # print(xn)
+            yn = self.raw['volt'][mask]
+
+            if np.size(xn) != 0:
+                slope, intercept, r_value, p_value, std_err = linregress(xn,yn)
+                vocIllum = np.append(vocIllum, np.log(value)*slope + intercept)
+            else:
+                vocIllum = np.append(vocIllum, 0)
+
+        self.vocIllum = vocIllum
+
     def calc_localIdeality(self, numpts):
         """
         Function to calculate the local ideality factor.
@@ -714,8 +767,8 @@ class Suns_Voc_Measurement:
         xData = np.log(self.effSuns)
         yData = self.raw['volt']
 
-        m = self.calc_slope(xData, yData, numpts, calcmVoc=0) / (self.const_k * self.TK / self.const_q)
-        self.calc_slope(xData, yData, numpts, calcmVoc=1)
+        m = self.calc_slope(xData, yData, numpts=numpts, calcmVoc=0) / (self.const_k * self.TK / self.const_q)
+        self.calc_slope(xData, yData, numpts=numpts, calcmVoc=1)
 
         # return 1 / ((self.const_k * self.TK / self.const_q) * np.gradient(xData, yData, edge_order=2))
 

@@ -67,22 +67,31 @@ The way it works is the following:
 """
 
 # %%--  USER INPUTS
-
+# Paths to sample files. Note that the double slash is needed in Windows.
 SMPL_Files = [
-    "C:\\Users\\z3525973\\Desktop\\Data\\191021 KAUST cell 2 p x 1.00\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST baseline std\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 4 p x 0.75\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 6 p x 2.00\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell X p x 4.00\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\191122_ANU_Control_marked_RE\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\191122_ANU_UMG_marked RE\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\191122_ANU_UMG_unmarked RE\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\191125_ANU_Control_unmarked_RE\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\200306_Al-BSF\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\200326_PERC-multi-cut\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\200326_Sunrise-PERC-cut\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\200416_Partner-X_Token 4_Anh\\"
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut_R1\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut_R2\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut_R3\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut_R4\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut_R5\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut_R6\\"
+    "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST baseline std\\"
+    # "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 4 p x 0.75\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 6 p x 2.00\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell X p x 4.00\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\191122_ANU_Control_marked_RE\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\191122_ANU_UMG_marked RE\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\191122_ANU_UMG_unmarked RE\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\191125_ANU_Control_unmarked_RE\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200306_Al-BSF\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200326_PERC-multi-cut\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200326_Sunrise-PERC-cut\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200416_Partner-X_Token 4_Anh\\"
 ]
+# Setpoint array for illumination at which the Voc is extracted
+# NOTE: the Voc values will be extracted from the LO measurement, hence with a
+# suns limit of 4. Besides the number of values defined here is limited to 5.
+illumSet = np.array([0.001, 0.01, 0.1, 1, 4])
 
 for path in SMPL_Files:
     print('# IMPORTING DATA FROM ########################################')
@@ -96,8 +105,10 @@ for path in SMPL_Files:
     DataFolder = path
 
     smplFilePath = ''
+    smplNum = 0
     for file in os.listdir(DataFolder):
         if file.endswith(".smpl"):
+            smplNum += 1
             smplFilePath = os.path.join(DataFolder, file)
     # the local slope of the Suns-Voc curve.
     idealPts = 8
@@ -111,6 +122,11 @@ for path in SMPL_Files:
     if smplFilePath == '':
         print('')
         print('ERROR: No *.smpl file was found. Please create one before running the code.')
+        print('')
+        exit()
+    elif smplNum > 1:
+        print('')
+        print('ERROR: More than one *.smpl file was found. Please make sure to have only one file in the data folder.')
         print('')
         exit()
 
@@ -270,8 +286,8 @@ for path in SMPL_Files:
 
         a = smplFilePath.split(slash)[len(smplFilePath.split(slash))-1]
         b = a[:a.find(".smpl")]
-        fcellParameters = open(os.path.join(DataFolder + slash + "_calcData", b + "Cell_Parameters.txt"), "w")
-        fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\n"
+        fcellParameters = open(os.path.join(DataFolder + slash + "_calcData", b + "_Para.txt"), "w")
+        fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
             .format(
                 "sample",
                 "T",
@@ -285,10 +301,15 @@ for path in SMPL_Files:
                 "m(Vmpp)",
                 "m(Voc)",
                 "delta Suns(LO to HI)",
-                "cal const"
+                "cal const",
+                "Voc_" + str(illumSet[0]),
+                "Voc_" + str(illumSet[1]),
+                "Voc_" + str(illumSet[2]),
+                "Voc_" + str(illumSet[3]),
+                "Voc_" + str(illumSet[4])
             )
         )
-        fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\n"
+        fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
             .format(
                 " ",
                 "[°C]",
@@ -302,10 +323,23 @@ for path in SMPL_Files:
                 " ",
                 " ",
                 "[V]",
-                " "
+                " ",
+                "[V]",
+                "[V]",
+                "[V]",
+                "[V]",
+                "[V]"
+            )
+        )
+        fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
+            .format(
+                " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
+                illumSet[0], illumSet[1], illumSet[2], illumSet[3], illumSet[4]
             )
         )
         fcellParameters.write("\n")
+
+        illumSet
 
         # If LO files have been found
         if NoFilesFound_lo == 0:
@@ -342,12 +376,13 @@ for path in SMPL_Files:
                     VocOneSunLO = 0,
                     SunsLO = 0,
                     SunsDataLO = 0,
+                    illumSetpoints = illumSet, # illumination setpoints to extract Voc from
                     dType = baseType, # n-type or p-type
                     refCal = calConstantLO, # calibration constant for the reference photodiode [V/suns]
                     aMode = 'GEN'
                 )
 
-                fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\n"
+                fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
                     .format(
                         SunsData.sn,
                         np.round(SunsData.T),
@@ -359,7 +394,14 @@ for path in SMPL_Files:
                         np.round(SunsData.pEff / 0.01,1),
                         np.round(SunsData.mppSuns,5),
                         np.round(SunsData.mppIdeality,3),
-                        np.round(SunsData.mVoc,3)
+                        np.round(SunsData.mVoc,3),
+                        0,
+                        0,
+                        np.round(SunsData.vocIllum[0],3),
+                        np.round(SunsData.vocIllum[1],3),
+                        np.round(SunsData.vocIllum[2],3),
+                        np.round(SunsData.vocIllum[3],3),
+                        np.round(SunsData.vocIllum[4],3)
                     )
                 )
 
@@ -422,7 +464,7 @@ for path in SMPL_Files:
                     aMode = 'GEN'
                 )
 
-                fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\n"
+                fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
                     .format(
                         SunsData.sn,
                         np.round(SunsData.T),
@@ -436,7 +478,12 @@ for path in SMPL_Files:
                         np.round(SunsData.mppIdeality,3),
                         np.round(SunsData.mVoc,3),
                         np.round(SunsData.dsuns, 4),
-                        np.round(SunsData.refCal, 4)
+                        np.round(SunsData.refCal, 4),
+                        0,
+                        0,
+                        0,
+                        0,
+                        0
                     )
                 )
 
@@ -487,12 +534,13 @@ for path in SMPL_Files:
                     VocOneSunLO = 0,
                     SunsLO = 0,
                     SunsDataLO = 0,
+                    illumSetpoints = illumSet, # illumination setpoints to extract Voc from
                     dType = baseType, # n-type or p-type
                     refCal = calConstantLO, # calibration constant for the reference photodiode [V/suns]
                     aMode = 'GEN'
                 )
 
-                fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\n"
+                fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
                     .format(
                         SunsData.sn,
                         np.round(SunsData.T),
@@ -504,7 +552,14 @@ for path in SMPL_Files:
                         np.round(SunsData.pEff / 0.01,1),
                         np.round(SunsData.mppSuns,5),
                         np.round(SunsData.mppIdeality,3),
-                        np.round(SunsData.mVoc,3)
+                        np.round(SunsData.mVoc,3),
+                        0,
+                        0,
+                        np.round(SunsData.vocIllum[0],3),
+                        np.round(SunsData.vocIllum[1],3),
+                        np.round(SunsData.vocIllum[2],3),
+                        np.round(SunsData.vocIllum[3],3),
+                        np.round(SunsData.vocIllum[4],3)
                     )
                 )
 
@@ -850,6 +905,7 @@ for path in SMPL_Files:
     else:
 
         print("No PL files have been found.")
+        print('')
 
     ######################################################################################################
     # MERGE LO AND HI DATA  ##############################################################################
