@@ -17,6 +17,7 @@ import SunsPL as pl
 from glob import glob
 from littleBigHelpers import walklevel, getTemp, printProgressBar
 from scipy.stats import linregress
+import pandas as pd
 
 import os
 import sys
@@ -67,37 +68,34 @@ The way it works is the following:
 """
 
 # %%--  USER INPUTS
-# Paths to sample files. Note that the double slash is needed in Windows.
+# List of paths to sample files. Note that the double slash is needed in Windows.
 SMPL_Files = [
-    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut_R1\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut_R2\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut_R3\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut_R4\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut_R5\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut_R6\\"
-    "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST baseline std\\"
-    # "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 4 p x 0.75\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 6 p x 2.00\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell X p x 4.00\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\191122_ANU_Control_marked_RE\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\191122_ANU_UMG_marked RE\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\191122_ANU_UMG_unmarked RE\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\191125_ANU_Control_unmarked_RE\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\200306_Al-BSF\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\200326_PERC-multi-cut\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\200326_Sunrise-PERC-cut\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\200416_Partner-X_Token 4_Anh\\"
+    "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut\\"
+#     "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 4 p x 0.75\\",
+#     "C:\\Users\\z3525973\\Desktop\\Data\\191021 KAUST cell 2 p x 1.00\\",
+#     "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 6 p x 2.00\\",
+#     "C:\\Users\\z3525973\\Desktop\\Data\\200326_PERC-multi-cut\\",
+#     "C:\\Users\\z3525973\\Desktop\\Data\\200326_Sunrise-PERC-cut\\",
+#     "C:\\Users\\z3525973\\Desktop\\Data\\200416_Partner-X_Token 4_Anh\\"
 ]
 # Setpoint array for illumination at which the Voc is extracted
 # NOTE: the Voc values will be extracted from the LO measurement, hence with a
 # suns limit of 4. Besides the number of values defined here is limited to 5.
-illumSet = np.array([0.001, 0.01, 0.1, 1, 4])
+# Change the number of points extracted: np.logspace(-3,np.log(4)/np.log(10),[NUMBER OF POINTS],endpoint=True)
+# 60 points are ok.
+illumSet = np.logspace(-3,np.log(4)/np.log(10),60,endpoint=True)
 
 for path in SMPL_Files:
     print('# IMPORTING DATA FROM ########################################')
     print('#### ' + path)
     print('##############################################################')
     print('')
+
+    # Set up exportation of data with pandas into Excel spreadsheet
+    column_names = ["T"] + ["Voc_" + str(idx) for idx, value in enumerate(illumSet)]
+    df = pd.DataFrame(columns = column_names)
+    dfpFFpEff = pd.DataFrame(columns = ['T', 'pFF', 'pEff'])
+    df.loc[0] = [0] + [value for value in illumSet]
 
     # Number of points that are used to calculate the local ideality factor, i.e.
     # DataFolder = the folder in which all the data is stored of one sample is.
@@ -181,6 +179,7 @@ for path in SMPL_Files:
     SunsDataListLO = []
     SunsDataListHI = []
     SunsDataListSTD = []
+    tempList = []
 
     # Find all the lo, hi or standard Suns-Voc files
     numFileList = [0, 0, 0]
@@ -266,6 +265,10 @@ for path in SMPL_Files:
 
                 # replace the old jsc by the new one that was calculated
                 jsc = njsc
+
+    # Reverse current and temperature
+    jsc.sort(reverse=True)
+    TS.sort(reverse=True)
 
     if check == 1:
         print("Please NOTE that the Jsc values were extrapolated using the following values.\n")
@@ -381,6 +384,12 @@ for path in SMPL_Files:
                     refCal = calConstantLO, # calibration constant for the reference photodiode [V/suns]
                     aMode = 'GEN'
                 )
+
+                # Populate the DataFrame for export to an Excel file
+                VocIllumDataRow = [SunsData.T] + [value for value in SunsData.vocIllum]
+                pFFpEffList = [SunsData.T, SunsData.pFF, SunsData.pEff]
+                df.loc[j+1] = VocIllumDataRow
+                dfpFFpEff.loc[j] = pFFpEffList
 
                 fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
                     .format(
@@ -540,6 +549,12 @@ for path in SMPL_Files:
                     aMode = 'GEN'
                 )
 
+                # Populate the DataFrame for export to an Excel file
+                VocIllumDataRow = [SunsData.T] + [value for value in SunsData.vocIllum]
+                pFFpEffList = [SunsData.T, SunsData.pFF, SunsData.pEff]
+                df.loc[j+1] = VocIllumDataRow
+                dfpFFpEff.loc[j] = pFFpEffList
+
                 fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
                     .format(
                         SunsData.sn,
@@ -581,6 +596,9 @@ for path in SMPL_Files:
             print('\n')
 
         fcellParameters.close()
+        # write Excel file with all the Voc Illum T data
+        df.to_excel(os.path.join(DataFolder + slash + "_calcData", "VocIllumT.xlsx"))
+        dfpFFpEff.to_excel(os.path.join(DataFolder + slash + "_calcData", "pFFpEffT.xlsx"))
 
         ######################################################################################################
         # MERGE LO AND HI DATA  ##############################################################################
