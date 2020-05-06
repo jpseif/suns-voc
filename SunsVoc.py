@@ -51,6 +51,8 @@ class Suns_Voc_Measurement:
         wThick=0.0180,
         rBase=2.8,
         idealityPts=4,
+        BGNon=1,
+        TdepON=1,
         Na=0,
         Nd=0,
         T=25.0,
@@ -81,13 +83,18 @@ class Suns_Voc_Measurement:
         self.idealityPts = idealityPts
         # exterior parameters
         self.T = T # sample temperature [°C]
-        self.TK = self.T + 273.15 # sample temperature [K]
+        if TdepON == 1:
+            self.TK = self.T + 273.15 # sample temperature [K]
+        else:
+            self.TK = 300
         # constants
         self.const_q = 1.602176487E-19 # elementary charge [C]
         self.const_k = 1.38064504E-23 # boltzmann constant [J/K]
         self.const_pi = 3.1415926535898 # Pi
         self.const_h = 6.62606896E-34 # planck constant [Js]
         self.const_e_Si = 11.7 # dielectric constant of Si (ref. Kittel)
+        # analysis related
+        self.BGNon = BGNon
         # cell parameters
         self.jsc = jsc # Jsc from I-V [A/cm2], e.g. 3.7E-2
         self.wThick = wThick # wafer thickness [cm], e.g. 0.0180
@@ -113,8 +120,13 @@ class Suns_Voc_Measurement:
         self.ni_initial = self.calc_ni_initial()
         self.dVdt = self.calc_dVdt()
         self.Dn = self.calc_Dn(ni_init = 1)
-        self.ni_eff = self.calc_ni_eff() # formerly calc_niBGN
-        self.Dn = self.calc_Dn(ni_init = 0) # first iteration after ni_eff
+
+        if self.BGNon == 1:
+            self.ni_eff = self.calc_ni_eff() # formerly calc_niBGN
+            self.Dn = self.calc_Dn(ni_init = 0) # first iteration after ni_eff
+        else:
+            self.ni_eff = self.ni_initial
+
         self.dndt = self.calc_dndt()
         self.netSuns = self.calc_netSuns()
         self.effSuns = self.calc_effSuns()
@@ -297,10 +309,15 @@ class Suns_Voc_Measurement:
             axis=0)
         normVoc = volt / SunsDataListLO[index].Voc
 
-        xData = np.log(effSuns)
-        yData = volt
-
-        localIdeality = self.calc_slope(xData, yData, numpts=self.idealityPts, calcmVoc=0) / (self.const_k * self.TK / self.const_q)
+        localIdeality = np.concatenate((SunsDataListHI[index].localIdeality[0:SunsDataListHI[index].indClosestVoc],
+            SunsDataListLO[index].localIdeality[:]),
+            axis=0)
+            
+        # RECALCULATING m(V) generates an artefact. Not sure why, but probably due to the stitching of HI and LO.
+        # xData = np.log(effSuns)
+        # yData = volt
+        #
+        # localIdeality = self.calc_slope(xData, yData, numpts=self.idealityPts, calcmVoc=0) / (self.const_k * self.TK / self.const_q)
 
         MergedData = np.array([time,
             refVolt,
@@ -456,14 +473,17 @@ class Suns_Voc_Measurement:
         nxc = self.Dn
         Na_array = np.array([self.Na] * nxc.shape[0])
         Nd_array = np.array([self.Nd] * nxc.shape[0])
-        ni_eff = BGN(
-            material='Si',
-            author='Schenk_1988fer',
-            temp=self.TK,
-            nxc=nxc,
-            Na=Na_array,
-            Nd=Nd_array
-            ).ni_eff(self.ni_initial)
+        if self.BGNon == 1:
+            ni_eff = BGN(
+                material='Si',
+                author='Schenk_1988fer',
+                temp=self.TK,
+                nxc=nxc,
+                Na=Na_array,
+                Nd=Nd_array
+                ).ni_eff(self.ni_initial)
+        else:
+            ni_eff = self.ni_initial
 
         return ni_eff
 

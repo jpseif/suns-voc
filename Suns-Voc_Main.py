@@ -70,20 +70,35 @@ The way it works is the following:
 # %%--  USER INPUTS
 # List of paths to sample files. Note that the double slash is needed in Windows.
 SMPL_Files = [
-    "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut\\"
-#     "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 4 p x 0.75\\",
-#     "C:\\Users\\z3525973\\Desktop\\Data\\191021 KAUST cell 2 p x 1.00\\",
-#     "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 6 p x 2.00\\",
-#     "C:\\Users\\z3525973\\Desktop\\Data\\200326_PERC-multi-cut\\",
-#     "C:\\Users\\z3525973\\Desktop\\Data\\200326_Sunrise-PERC-cut\\",
-#     "C:\\Users\\z3525973\\Desktop\\Data\\200416_Partner-X_Token 4_Anh\\"
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut\\",
+    "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 4 p x 0.75\\"
+    # "C:\\Users\\z3525973\\Desktop\\Data\\191021 KAUST cell 2 p x 1.00\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 6 p x 2.00\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200326_PERC-multi-cut\\"
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200326_Sunrise-PERC-cut\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200416_Partner-X_Token 4_Anh\\"
+    # "C:\\Users\\z3525973\\Desktop\\Data\\BB0\\"
 ]
 # Setpoint array for illumination at which the Voc is extracted
 # NOTE: the Voc values will be extracted from the LO measurement, hence with a
 # suns limit of 4. Besides the number of values defined here is limited to 5.
 # Change the number of points extracted: np.logspace(-3,np.log(4)/np.log(10),[NUMBER OF POINTS],endpoint=True)
 # 60 points are ok.
+# USE the next row if you want to have Voc(illum) data
 illumSet = np.logspace(-3,np.log(4)/np.log(10),60,endpoint=True)
+# USE the next row if you do NOT want to have Voc(illum) data
+# illumSet = []
+# Bandgap narrowing ON = 1, OFF = 0
+BGNonoff = 1
+# Temperature dependencies for Suns-Voc ON = 1 and OFF = 0. If ON, the actual
+# measurement temperature will be used for the calculations. If OFF, the temperature
+# will be set to 300 K.
+TdepON = 1
+# Average over X points to calculate m(V). 8 seems to be a good value.
+idealPts = 8
+# DEBUG: If set to True all the filenames of the imported files will be printed.
+# This can be used to debug the code and see which data works and which doesn't.
+PrintFileNames = False
 
 for path in SMPL_Files:
     print('# IMPORTING DATA FROM ########################################')
@@ -92,10 +107,12 @@ for path in SMPL_Files:
     print('')
 
     # Set up exportation of data with pandas into Excel spreadsheet
-    column_names = ["T"] + ["Voc_" + str(idx) for idx, value in enumerate(illumSet)]
-    df = pd.DataFrame(columns = column_names)
-    dfpFFpEff = pd.DataFrame(columns = ['T', 'pFF', 'pEff'])
-    df.loc[0] = [0] + [value for value in illumSet]
+    if illumSet != []:
+
+        column_names = ["T"] + ["Voc_" + str(idx) for idx, value in enumerate(illumSet)]
+        df = pd.DataFrame(columns = column_names)
+        dfpFFpEff = pd.DataFrame(columns = ['T', 'pFF', 'pEff'])
+        df.loc[0] = [0] + [value for value in illumSet]
 
     # Number of points that are used to calculate the local ideality factor, i.e.
     # DataFolder = the folder in which all the data is stored of one sample is.
@@ -108,11 +125,6 @@ for path in SMPL_Files:
         if file.endswith(".smpl"):
             smplNum += 1
             smplFilePath = os.path.join(DataFolder, file)
-    # the local slope of the Suns-Voc curve.
-    idealPts = 8
-    # If set to True all the filenames of the imported files will be printed.
-    # This can be used to debug the code and see which data works and which doesn't.
-    PrintFileNames = True
     # %%-
 
     # %%--  HOuSEKEEPING
@@ -290,7 +302,7 @@ for path in SMPL_Files:
         a = smplFilePath.split(slash)[len(smplFilePath.split(slash))-1]
         b = a[:a.find(".smpl")]
         fcellParameters = open(os.path.join(DataFolder + slash + "_calcData", b + "_Para.txt"), "w")
-        fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
+        fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\n"
             .format(
                 "sample",
                 "T",
@@ -304,15 +316,10 @@ for path in SMPL_Files:
                 "m(Vmpp)",
                 "m(Voc)",
                 "delta Suns(LO to HI)",
-                "cal const",
-                "Voc_" + str(illumSet[0]),
-                "Voc_" + str(illumSet[1]),
-                "Voc_" + str(illumSet[2]),
-                "Voc_" + str(illumSet[3]),
-                "Voc_" + str(illumSet[4])
+                "cal const"
             )
         )
-        fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
+        fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\n"
             .format(
                 " ",
                 "[°C]",
@@ -332,12 +339,6 @@ for path in SMPL_Files:
                 "[V]",
                 "[V]",
                 "[V]"
-            )
-        )
-        fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
-            .format(
-                " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
-                illumSet[0], illumSet[1], illumSet[2], illumSet[3], illumSet[4]
             )
         )
         fcellParameters.write("\n")
@@ -373,6 +374,8 @@ for path in SMPL_Files:
                     jsc = jsc[j], # short-circuit current density [A/cm2]
                     wThick = waferThickness, # wafer thickness [cm]
                     idealityPts=idealPts, # number of points to calculate the local ideality factor
+                    BGNon = BGNonoff, # 1 = BandGapNarrowing ON, 0 = OFF
+                    TdepON = TdepON, # 1 = measurement temperature will be used, 0 = 300 K will be used for all calculations
                     rBase = baseResistivity, # base resistivity [Ohm.cm]
                     T = mTemp, # sample temperature [°C]
                     VocLO = 0, # Voc values from the lo measurments
@@ -386,12 +389,14 @@ for path in SMPL_Files:
                 )
 
                 # Populate the DataFrame for export to an Excel file
-                VocIllumDataRow = [SunsData.T] + [value for value in SunsData.vocIllum]
-                pFFpEffList = [SunsData.T, SunsData.pFF, SunsData.pEff]
-                df.loc[j+1] = VocIllumDataRow
-                dfpFFpEff.loc[j] = pFFpEffList
+                if illumSet != []:
 
-                fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
+                    VocIllumDataRow = [SunsData.T] + [value for value in SunsData.vocIllum]
+                    pFFpEffList = [SunsData.T, SunsData.pFF, SunsData.pEff]
+                    df.loc[j+1] = VocIllumDataRow
+                    dfpFFpEff.loc[j] = pFFpEffList
+
+                fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\n"
                     .format(
                         SunsData.sn,
                         np.round(SunsData.T),
@@ -405,12 +410,7 @@ for path in SMPL_Files:
                         np.round(SunsData.mppIdeality,3),
                         np.round(SunsData.mVoc,3),
                         0,
-                        0,
-                        np.round(SunsData.vocIllum[0],3),
-                        np.round(SunsData.vocIllum[1],3),
-                        np.round(SunsData.vocIllum[2],3),
-                        np.round(SunsData.vocIllum[3],3),
-                        np.round(SunsData.vocIllum[4],3)
+                        0
                     )
                 )
 
@@ -463,6 +463,8 @@ for path in SMPL_Files:
                     wThick = waferThickness, # wafer thickness [cm]
                     rBase = baseResistivity, # base resistivity [Ohm.cm]
                     idealityPts=idealPts, # number of points to calculate the local ideality factor
+                    BGNon = BGNonoff, # 1 = BandGapNarrowing ON, 0 = OFF
+                    TdepON = TdepON, # 1 = measurement temperature will be used, 0 = 300 K will be used for all calculations
                     T = mTemp, # sample temperature [°C]
                     VocLO = cVoc[j], # Voc values of the LO measurments to which the closest value in the HI data will be found
                     VocOneSunLO = cVocOneSun[j],
@@ -473,7 +475,7 @@ for path in SMPL_Files:
                     aMode = 'GEN'
                 )
 
-                fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
+                fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\n"
                     .format(
                         SunsData.sn,
                         np.round(SunsData.T),
@@ -487,12 +489,7 @@ for path in SMPL_Files:
                         np.round(SunsData.mppIdeality,3),
                         np.round(SunsData.mVoc,3),
                         np.round(SunsData.dsuns, 4),
-                        np.round(SunsData.refCal, 4),
-                        0,
-                        0,
-                        0,
-                        0,
-                        0
+                        np.round(SunsData.refCal, 4)
                     )
                 )
 
@@ -538,6 +535,8 @@ for path in SMPL_Files:
                     wThick = waferThickness, # wafer thickness [cm]
                     rBase = baseResistivity, # base resistivity [Ohm.cm]
                     idealityPts=idealPts, # number of points to calculate the local ideality factor
+                    BGNon = BGNonoff, # 1 = BandGapNarrowing ON, 0 = OFF
+                    TdepON = TdepON, # 1 = measurement temperature will be used, 0 = 300 K will be used for all calculations
                     T = mTemp, # sample temperature [°C]
                     VocLO = 0, # Voc values from the lo measurments
                     VocOneSunLO = 0,
@@ -550,12 +549,14 @@ for path in SMPL_Files:
                 )
 
                 # Populate the DataFrame for export to an Excel file
-                VocIllumDataRow = [SunsData.T] + [value for value in SunsData.vocIllum]
-                pFFpEffList = [SunsData.T, SunsData.pFF, SunsData.pEff]
-                df.loc[j+1] = VocIllumDataRow
-                dfpFFpEff.loc[j] = pFFpEffList
+                if illumSet != []:
 
-                fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\t {13}\t {14}\t {15}\t {16}\t {17}\n"
+                    VocIllumDataRow = [SunsData.T] + [value for value in SunsData.vocIllum]
+                    pFFpEffList = [SunsData.T, SunsData.pFF, SunsData.pEff]
+                    df.loc[j+1] = VocIllumDataRow
+                    dfpFFpEff.loc[j] = pFFpEffList
+
+                fcellParameters.write("{0}\t {1}\t {2}\t {3}\t {4}\t {5}\t {6}\t {7}\t {8}\t {9}\t {10}\t {11}\t {12}\n"
                     .format(
                         SunsData.sn,
                         np.round(SunsData.T),
@@ -569,12 +570,7 @@ for path in SMPL_Files:
                         np.round(SunsData.mppIdeality,3),
                         np.round(SunsData.mVoc,3),
                         0,
-                        0,
-                        np.round(SunsData.vocIllum[0],3),
-                        np.round(SunsData.vocIllum[1],3),
-                        np.round(SunsData.vocIllum[2],3),
-                        np.round(SunsData.vocIllum[3],3),
-                        np.round(SunsData.vocIllum[4],3)
+                        0
                     )
                 )
 
@@ -597,8 +593,10 @@ for path in SMPL_Files:
 
         fcellParameters.close()
         # write Excel file with all the Voc Illum T data
-        df.to_excel(os.path.join(DataFolder + slash + "_calcData", "VocIllumT.xlsx"))
-        dfpFFpEff.to_excel(os.path.join(DataFolder + slash + "_calcData", "pFFpEffT.xlsx"))
+        if illumSet != []:
+
+            df.to_excel(os.path.join(DataFolder + slash + "_calcData", "VocIllumT.xlsx"))
+            dfpFFpEff.to_excel(os.path.join(DataFolder + slash + "_calcData", "pFFpEffT.xlsx"))
 
         ######################################################################################################
         # MERGE LO AND HI DATA  ##############################################################################
