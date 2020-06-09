@@ -312,7 +312,7 @@ class Suns_Voc_Measurement:
         localIdeality = np.concatenate((SunsDataListHI[index].localIdeality[0:SunsDataListHI[index].indClosestVoc],
             SunsDataListLO[index].localIdeality[:]),
             axis=0)
-            
+
         # RECALCULATING m(V) generates an artefact. Not sure why, but probably due to the stitching of HI and LO.
         # xData = np.log(effSuns)
         # yData = volt
@@ -468,7 +468,7 @@ class Suns_Voc_Measurement:
                 float
             - excess carrier density [cm-3]
         Output:
-            - effective n_i data
+            - n_i,eff data
         """
         nxc = self.Dn
         Na_array = np.array([self.Na] * nxc.shape[0])

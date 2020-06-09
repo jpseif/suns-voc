@@ -18,6 +18,7 @@ from glob import glob
 from littleBigHelpers import walklevel, getTemp, printProgressBar
 from scipy.stats import linregress
 import pandas as pd
+import xlsxwriter
 
 import os
 import sys
@@ -70,12 +71,23 @@ The way it works is the following:
 # %%--  USER INPUTS
 # List of paths to sample files. Note that the double slash is needed in Windows.
 SMPL_Files = [
-    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut\\",
-    "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 4 p x 0.75\\"
+    # "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 4 p x 0.75\\",
     # "C:\\Users\\z3525973\\Desktop\\Data\\191021 KAUST cell 2 p x 1.00\\",
     # "C:\\Users\\z3525973\\Desktop\\Data\\191023 KAUST cell 6 p x 2.00\\",
-    # "C:\\Users\\z3525973\\Desktop\\Data\\200326_PERC-multi-cut\\"
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200326_PERC-multi-cut\\",
     # "C:\\Users\\z3525973\\Desktop\\Data\\200326_Sunrise-PERC-cut\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200421_Al-BSF_cut\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200518_PERT-1_Jack\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200518_TOPCon_TC-1_Jack\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200601_HJT_SW_3\\"
+    "C:\\Users\\z3525973\\Desktop\\Data\\200601_HJT_SW_3_beforeCleave\\",
+    "C:\\Users\\z3525973\\Desktop\\Data\\200601_HJT_SW_3_afterCleave\\"
+
+    # "C:\\Users\\z3525973\\Desktop\\Data\\test_01\\"
+    # "C:\\Users\\z3525973\\Desktop\\Data\\test_02\\",
+    # "C:\\Users\\z3525973\\Desktop\\Data\\test_03\\"
+    # "C:\\Users\\z3525973\\Desktop\\Data\\200519_HJT_Sunwell_2_full6\\",
+
     # "C:\\Users\\z3525973\\Desktop\\Data\\200416_Partner-X_Token 4_Anh\\"
     # "C:\\Users\\z3525973\\Desktop\\Data\\BB0\\"
 ]
@@ -86,19 +98,22 @@ SMPL_Files = [
 # 60 points are ok.
 # USE the next row if you want to have Voc(illum) data
 illumSet = np.logspace(-3,np.log(4)/np.log(10),60,endpoint=True)
+# illumSet = np.array([0.001,0.01,0.1,1,4])
 # USE the next row if you do NOT want to have Voc(illum) data
 # illumSet = []
-# Bandgap narrowing ON = 1, OFF = 0
+# Bandgap narrowing ON = 1 (standard), OFF = 0
 BGNonoff = 1
-# Temperature dependencies for Suns-Voc ON = 1 and OFF = 0. If ON, the actual
+# Temperature dependencies for Suns-Voc ON = 1 (standard) and OFF = 0. If ON, the actual
 # measurement temperature will be used for the calculations. If OFF, the temperature
 # will be set to 300 K.
 TdepON = 1
 # Average over X points to calculate m(V). 8 seems to be a good value.
-idealPts = 8
+idealPts = 4
+# Export Jshifted-Voc data for modelling in PV-Lighthouse
+exportShiftedJ = 0
 # DEBUG: If set to True all the filenames of the imported files will be printed.
 # This can be used to debug the code and see which data works and which doesn't.
-PrintFileNames = False
+PrintFileNames = True
 
 for path in SMPL_Files:
     print('# IMPORTING DATA FROM ########################################')
@@ -165,13 +180,17 @@ for path in SMPL_Files:
         config.read_file(fp)
         waferThickness = float(config['Sample']['waferThickness'])
         baseResistivity = float(config['Sample']['baseResistivity'])
-        jsc = config['Sample']['jsc'].split(',') # takes single values of jsc or a list separated by ','
+        # jsc = config['Sample']['jsc'].split(',') # takes single values of jsc or a list separated by ','
+        jsc = config['Sample']['jsc'].split('\t') # takes single values of jsc or a list separated by ','
         jsc = [float(i) for i in jsc] # jsc list with float values
+        jsc0 = jsc[0]
         TCjsc = float(config['Sample']['TCjsc']) # temperature coefficient Jsc
         JscT = float(config['Sample']['JscT']) # measurement temperature at which the only Jsc value was measured
-        JscTS = config['Sample']['JscTS'].split(',') # takes a list of T values separated by ','
+        # JscTS = config['Sample']['JscTS'].split(',') # takes a list of T values separated by ','
+        JscTS = config['Sample']['JscTS'].split('\t') # takes a list of T values separated by ','
         JscTS = [float(i) for i in JscTS] # T list with float values
-        TS = config['Sample']['TS'].split(',') # takes single values of TS or a list separated by ','
+        # TS = config['Sample']['TS'].split(',') # takes single values of TS or a list separated by ','
+        TS = config['Sample']['TS'].split('\t') # takes single values of TS or a list separated by ','
         TS = [float(i) for i in TS] # TS list with float values
         baseType = config['Sample']['baseType']
         calConstantLO = float(config['Measurement']['calConstantLO'])
@@ -258,6 +277,10 @@ for path in SMPL_Files:
                     njsc = []
                     # calculate the Jsc values for all the temperatures at which Suns-Voc was measured
                     for i in range(numFiles):
+                        # The Jsc values are calculated according to the following formula:
+                        # jsc value (typcially at 25°C) [A/cm2]
+                        # + (Temperature value from list - 25°C or temperature at which Jsc was measured) [°C]
+                        # * TCjsc (temperature coefficient) [A/cm2/°C]
                         njsc.append(jsc[0] + (TS[i] - JscT) * TCjsc)
 
                     # replace the old jsc by the new one that was calculated
@@ -283,16 +306,22 @@ for path in SMPL_Files:
     TS.sort(reverse=True)
 
     if check == 1:
-        print("Please NOTE that the Jsc values were extrapolated using the following values.\n")
-        print("\tJsc [A/cm2]: %s" % str('{:.3e}'.format(jsc[0])))
-        print("\tJsc measured at T [°C]: %s" % str(JscT))
+        print("Please NOTE that the Jsc values were extrapolated using the following value.\n")
+        # print("\tJsc [A/cm2]: %s" % str('{:.4f}'.format(jsc[numFiles-1])))
+        # print("\tJsc estimated at: %s°C" % str('{:.1f}'.format(TS[numFiles-1])))
         print("\tTCjsc [A/cm2/°C]: %s\n" % str('{:.3e}'.format(TCjsc)))
 
     print("The following Suns-Voc files have been found. LO: %s, HI: %s and STD: %s\n"
           % (str(numFileList[0]), str(numFileList[1]), str(numFileList[2])))
 
+    if TdepON == 1:
+        print("Temperature dependencies active.\n")
+    if BGNonoff == 1:
+        print("Band gap narrowing active.\n")
+
     if checkAgain == 1:
         print("No TCjsc value was defined in the *.smpl file. Please correct that and start over.")
+        exit()
 
     else:
         # Create the directory
@@ -342,8 +371,6 @@ for path in SMPL_Files:
             )
         )
         fcellParameters.write("\n")
-
-        illumSet
 
         # If LO files have been found
         if NoFilesFound_lo == 0:
@@ -610,6 +637,9 @@ for path in SMPL_Files:
 
                 print("Merging the Suns-Voc LO and HI data... please wait.")
 
+                column_names_JscShift = ["Voc", "J", "Jshifted"] # As discussed with Keith McIntosh, shift data by Jsc to be able to fit.
+                # writer = pd.ExcelWriter(os.path.join(DataFolder + slash + "_calcData-merged", "Jshifted-Voc.xlsx"), engine = 'xlsxwriter')
+
                 for j in range(len(SunsDataListLO)):
 
                     MergedData = SunsDataListLO[j].MergeData(SunsDataListLO, SunsDataListHI, j)
@@ -712,6 +742,17 @@ for path in SMPL_Files:
                             )
 
                             f2.write("\n")
+
+                            if exportShiftedJ == 1:
+
+                                df_Jshifted = pd.DataFrame(
+                                    {
+                                        "Voc": MergedData[2],
+                                        "J": MergedData[8],
+                                        "Jshifted": MergedData[8] + SunsDataListLO[j].jsc
+                                    }
+                                )
+                                df_Jshifted.to_excel(os.path.join(DataFolder + slash + "_calcData-merged", str(np.round(SunsDataListLO[j].T)) + "_Jshifted.xlsx"))
 
                     f2.close()
 

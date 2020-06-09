@@ -1,0 +1,23 @@
+[Sample]
+waferThickness = 0.0150
+baseResistivity = 2
+baseType = n-type
+jsc = 0.03787152	0.037946503	0.038032383	0.038140161	0.038167972	0.038229935	0.038338028	0.038402479
+TCjsc = 3E-5
+JscT = 25
+JscTS = 25	29.8	34.8	39.5	44.8	50.2	59.5	64.4
+TS = 30	35	40	45	50	55	60	65	70	75	80	85	90	95	100	105	110	115	120	125	130	135	140
+
+[Measurement]
+calConstantLO = 0.115273
+
+## COMMENTS
+# jsc: is the short-circuit current density in A/cm2. If you have I-V(T) measurements add all the Jsc values for the temperatures you measured.
+    # If only the value at 25°C is available a TCjsc value needs to be given
+    # If at least two Jsc values are given for two different temperatures a linear regression will be applied to determin TCjsc and the remaining Jsc values will be extrapolated
+    # Note the order corresponds to TS
+# TCjsc: is the temperature coefficient of the Jsc in A/cm2/°C, DEFAULT: 3E-5.
+# JscT: This is the temperature at which the cell was measured if only one Jsc value is available, DEFAULT: 25°C
+# JscTS: This is the list of temperatures at which the Jsc was measured, I-V(T) measurement
+# TS: is the list of temperatures at which the Suns-Voc and Suns-PL measurements were taken.
+# calConstantLO: is the calibration constant to convert voltage into suns. It has to be changed when measuring with high illumination intensity.
