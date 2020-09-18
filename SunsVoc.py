@@ -160,7 +160,11 @@ class Suns_Voc_Measurement:
         Note that to access the different values you use self.raw['volt'] or any of the other column names.
         """
         self.raw = np.genfromtxt(self.f, delimiter='\t', skip_header=11, names=self.names, usecols=(0,1,2,3))
-
+        
+        if self.raw['volt'][0]<0:
+            print("The cell voltage data seems to need inverting.")
+            self.raw['volt'] = -self.raw['volt']
+            
     def DistAverageSuns(self, avgLO, avgHI, calConst):
 
         dsuns = avgLO - calConst * avgHI
