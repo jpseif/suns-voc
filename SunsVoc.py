@@ -164,6 +164,15 @@ class Suns_Voc_Measurement:
         if self.raw['volt'][0]<0:
             print("The cell voltage data seems to need inverting.")
             self.raw['volt'] = -self.raw['volt']
+        if self.raw['ref_volt'][-1]<0:
+            print("The reference voltage and suns values rest at a value smaller than zero, this has been corrected.")
+          
+            # correct by the last millisecond. Use median to avoid outlier effects
+            ref_volt_offset = np.median(self.raw['ref_volt'][-10::])
+            self.raw['ref_volt'] += abs(ref_volt_offset)
+            
+            suns_offset = np.median(self.raw['suns'][-10::])
+            self.raw['suns'] += abs(suns_offset)
             
     def DistAverageSuns(self, avgLO, avgHI, calConst):
 
