@@ -739,7 +739,7 @@ class Suns_Voc_Measurement:
 
         return pFF
 
-       def getVocVSIllum(self, setpoints, MergedData = 0):
+    def getVocVSIllum(self, setpoints, MergedData = 0):
         """
         Last update: Simon Zhang, 15/11/2020:
             - Added the ability to use MergedData to fit merged _LO and _HI data
@@ -765,10 +765,10 @@ class Suns_Voc_Measurement:
 #                print("Sun setpoint: " + str(value))
     
                 idx1 = (np.abs(self.netSuns - value)).argmin()
-                print("idx1: " + str(idx1))
+#                print("idx1: " + str(idx1))
                 # print("self.effSuns[idx1]: " + str(self.netSuns[idx1]))
                 if self.netSuns[idx1] >= value:
-                    print(self.netSuns[idx1])
+#                    print(self.netSuns[idx1])
                     idx1 = idx1 - 2
                     idx2 = idx1 + 2
                     mask = (self.netSuns <= self.netSuns[idx1]) & (self.netSuns >= self.netSuns[idx2])
