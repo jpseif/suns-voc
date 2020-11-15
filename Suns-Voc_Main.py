@@ -128,6 +128,9 @@ for path in SMPL_Files:
         df = pd.DataFrame(columns = column_names)
         dfpFFpEff = pd.DataFrame(columns = ['T', 'pFF', 'pEff'])
         df.loc[0] = [0] + [value for value in illumSet]
+        dfVoc = pd.DataFrame(columns = column_names)
+        dfVoc.loc[0] = [0] + [value for value in illumSet]
+        
 
     # Number of points that are used to calculate the local ideality factor, i.e.
     # DataFolder = the folder in which all the data is stored of one sample is.
@@ -622,7 +625,7 @@ for path in SMPL_Files:
         # write Excel file with all the Voc Illum T data
         if illumSet != []:
 
-            df.to_excel(os.path.join(DataFolder + slash + "_calcData", "VocIllumT.xlsx"))
+            df.to_excel(os.path.join(DataFolder + slash + "_calcData", "VocIllumT not merged.xlsx")) 
             dfpFFpEff.to_excel(os.path.join(DataFolder + slash + "_calcData", "pFFpEffT.xlsx"))
 
         ######################################################################################################
@@ -649,6 +652,11 @@ for path in SMPL_Files:
 
                     if not os.path.isdir(SunsDataListLO[j].sp + slash + "_calcData-merged" + slash + "SV"):
                         os.mkdir(SunsDataListLO[j].sp + slash + "_calcData-merged" + slash + "SV")
+                    
+                    if illumSet != []:
+                        VocIllumMerged = SunsDataListLO[j].getVocVSIllum(setpoints=illumSet, MergedData = MergedData) #using SunsDataListLO[j] seems rather ad-hoc (same as a few lines above in the for loop), but it works
+                        VocIllumMergedRow = [SunsDataListLO[j].T] + [value for value in VocIllumMerged]
+                        dfVoc.loc[j+1] = VocIllumMergedRow
 
                     f2 = open(os.path.join(SunsDataListLO[j].sp +
                                            slash +
@@ -757,6 +765,10 @@ for path in SMPL_Files:
                     f2.close()
 
                     printProgressBar(j+1, len(SunsDataListLO))
+                    
+                # write Excel file with all the Voc Illum T data
+                if illumSet != []:
+                    dfVoc.to_excel(os.path.join(DataFolder + slash + "_calcData-merged", "VocIllumT.xlsx")) 
 
                 print('\n')
 
