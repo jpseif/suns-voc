@@ -770,13 +770,13 @@ class Suns_Voc_Measurement:
                 if self.netSuns[idx1] >= value:
 #                    print(self.netSuns[idx1])
                     idx1 = idx1 - 2
-                    idx2 = idx1 + 2
+                    idx2 = idx1 + 3
                     mask = (self.netSuns <= self.netSuns[idx1]) & (self.netSuns >= self.netSuns[idx2])
     #                print("idx1: " + str(idx1))
     #                print("idx2: " + str(idx2))
                 elif self.netSuns[idx1] <= value:
                     idx1 = idx1 + 2
-                    idx2 = idx1 - 2
+                    idx2 = idx1 - 3
                     mask = (self.netSuns >= self.netSuns[idx1]) & (self.netSuns <= self.netSuns[idx2])
     #                print("idx1: " + str(idx1))
     #                print("idx2: " + str(idx2))
@@ -810,13 +810,13 @@ class Suns_Voc_Measurement:
                 # print("self.effSuns[idx1]: " + str(self.netSuns[idx1]))
                 if MergedData[5][idx1] >= value:
                     idx1 = idx1 - 2
-                    idx2 = idx1 + 2
+                    idx2 = idx1 + 3
                     mask = (MergedData[5] <= MergedData[5][idx1]) & (MergedData[5] >= MergedData[5][idx2])
     #                print("idx1: " + str(idx1))
     #                print("idx2: " + str(idx2))
                 elif MergedData[5][idx1] <= value:
                     idx1 = idx1 + 2
-                    idx2 = idx1 - 2
+                    idx2 = idx1 - 3
                     mask = (MergedData[5] >= MergedData[5][idx1]) & (MergedData[5] <= MergedData[5][idx2])
     #                print("idx1: " + str(idx1))
     #                print("idx2: " + str(idx2))
