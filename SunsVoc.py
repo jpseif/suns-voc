@@ -164,6 +164,15 @@ class Suns_Voc_Measurement:
         if self.raw['volt'][0]<0:
             print("The cell voltage data seems to need inverting.")
             self.raw['volt'] = -self.raw['volt']
+        if self.raw['ref_volt'][-1]<0:
+            print("The reference voltage and suns values rest at a value smaller than zero, this has been corrected.")
+          
+            # correct by the last millisecond. Use median to avoid outlier effects
+            ref_volt_offset = np.median(self.raw['ref_volt'][-10::])
+            self.raw['ref_volt'] += abs(ref_volt_offset)
+            
+            suns_offset = np.median(self.raw['suns'][-10::])
+            self.raw['suns'] += abs(suns_offset)
             
         if self.raw['ref_volt'][-1]<0:
             print("The reference voltage and suns values rest at a value smaller than zero, this has been corrected.")
@@ -740,52 +749,100 @@ class Suns_Voc_Measurement:
 
         return pFF
 
-    def getVocVSIllum(self, setpoints):
+    def getVocVSIllum(self, setpoints, MergedData = 0):
         """
+        Last update: Simon Zhang, 15/11/2020:
+            - Added the ability to use MergedData to fit merged _LO and _HI data
+        
         Gets the Voc values for user-defined illumination levels.
 
         Inputs:
             - setpoints: numpy array containing the setpoint values for the illumination
             - illum: numpy array containing illumination data
             - voc: numpy array containing Voc data
+            - MergedData: temp-specific Suns-Voc data after analysis and merging
         Outputs:
             - numpy array containing the Voc values for each setpoint illum.
         """
+        if type(MergedData) == int: # the use case before data is merged, resulting in the _LO output only
+            
+            setpoints = np.asarray(setpoints)
+            setpointslog = np.log(setpoints)
+            vocIllum = np.array([])
+            mask = np.array([])
 
-        setpoints = np.asarray(setpoints)
-        setpointslog = np.log(setpoints)
-        vocIllum = np.array([])
-        mask = np.array([])
+            for value in setpoints:
+#                print("Sun setpoint: " + str(value))
+    
+                idx1 = (np.abs(self.netSuns - value)).argmin()
+#                print("idx1: " + str(idx1))
+                # print("self.effSuns[idx1]: " + str(self.netSuns[idx1]))
+                if self.netSuns[idx1] >= value:
+#                    print(self.netSuns[idx1])
+                    idx1 = idx1 - 2
+                    idx2 = idx1 + 2
+                    mask = (self.netSuns <= self.netSuns[idx1]) & (self.netSuns >= self.netSuns[idx2])
+    #                print("idx1: " + str(idx1))
+    #                print("idx2: " + str(idx2))
+                elif self.netSuns[idx1] <= value:
+                    idx1 = idx1 + 2
+                    idx2 = idx1 - 2
+                    mask = (self.netSuns >= self.netSuns[idx1]) & (self.netSuns <= self.netSuns[idx2])
+    #                print("idx1: " + str(idx1))
+    #                print("idx2: " + str(idx2))
+    
+                # print(mask)
+                xn = np.log(self.netSuns[mask])
+                # print(xn)
+                yn = self.raw['volt'][mask]
+    
+                if np.size(xn) != 0 and self.netSuns[0]>=value:
+                    slope, intercept, r_value, p_value, std_err = linregress(xn,yn)
+                    vocIllum = np.append(vocIllum, np.log(value)*slope + intercept)
+                else:
+                    vocIllum = np.append(vocIllum, 0)
 
-        for value in setpoints:
-            # print("Sun setpoint: " + str(value))
+            self.vocIllum = vocIllum
+            
+            
+        else: # the use case after data is merged, resulting in full merged output
 
-            idx1 = (np.abs(self.netSuns - value)).argmin()
-            # print("idx1: " + str(idx1))
-            # print("self.effSuns[idx1]: " + str(self.netSuns[idx1]))
-            if self.netSuns[idx1] >= value:
-                idx2 = idx1 + 1
-                mask = (self.netSuns <= self.netSuns[idx1]) & (self.netSuns >= self.netSuns[idx2])
+            setpoints = np.asarray(setpoints)
+            setpointslog = np.log(setpoints)
+            vocIllum = np.array([])
+            mask = np.array([])    
+            
+            for value in setpoints:
+                # print("Sun setpoint: " + str(value))
+                
+                idx1 = (np.abs(MergedData[5] - value)).argmin()
                 # print("idx1: " + str(idx1))
-                # print("idx2: " + str(idx2))
-            elif self.netSuns[idx1] <= value:
-                idx2 = idx1 - 1
-                mask = (self.netSuns >= self.netSuns[idx1]) & (self.netSuns <= self.netSuns[idx2])
-                # print("idx1: " + str(idx1))
-                # print("idx2: " + str(idx2))
-
-            # print(mask)
-            xn = np.log(self.netSuns[mask])
-            # print(xn)
-            yn = self.raw['volt'][mask]
-
-            if np.size(xn) != 0:
-                slope, intercept, r_value, p_value, std_err = linregress(xn,yn)
-                vocIllum = np.append(vocIllum, np.log(value)*slope + intercept)
-            else:
-                vocIllum = np.append(vocIllum, 0)
-
-        self.vocIllum = vocIllum
+                # print("self.effSuns[idx1]: " + str(self.netSuns[idx1]))
+                if MergedData[5][idx1] >= value:
+                    idx1 = idx1 - 2
+                    idx2 = idx1 + 2
+                    mask = (MergedData[5] <= MergedData[5][idx1]) & (MergedData[5] >= MergedData[5][idx2])
+    #                print("idx1: " + str(idx1))
+    #                print("idx2: " + str(idx2))
+                elif MergedData[5][idx1] <= value:
+                    idx1 = idx1 + 2
+                    idx2 = idx1 - 2
+                    mask = (MergedData[5] >= MergedData[5][idx1]) & (MergedData[5] <= MergedData[5][idx2])
+    #                print("idx1: " + str(idx1))
+    #                print("idx2: " + str(idx2))
+    
+                # print(mask)
+                xn = np.log(MergedData[5][mask])
+                # print(xn)
+                yn = MergedData[2][mask]
+    
+                if np.size(xn) != 0:
+                    slope, intercept, r_value, p_value, std_err = linregress(xn,yn)
+                    vocIllum = np.append(vocIllum, np.log(value)*slope + intercept)
+                else:
+                    vocIllum = np.append(vocIllum, 100)
+        
+            return vocIllum
 
     def calc_localIdeality(self, numpts):
         """
